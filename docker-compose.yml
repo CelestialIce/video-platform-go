@@ -1,0 +1,61 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: video-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: your_strong_password
+      MYSQL_DATABASE: video_platform_mvp
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: video-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: video-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"  # AMQP 协议端口
+      - "15672:15672" # 管理界面端口
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+
+  minio:
+    image: minio/minio
+    container_name: video-minio
+    restart: always
+    ports:
+      - "9000:9000"   # S3 API 端口
+      - "9001:9001"   # 控制台端口
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+
+  srs:
+    image: ossrs/srs:5
+    container_name: video-srs
+    restart: always
+    ports:
+      - "1935:1935"   # RTMP
+      - "8080:8080"   # HTTP-FLV / HLS
+      - "1985:1985"   # HTTP API
+      - "8000:8000/udp" # WebRTC
+
+volumes:
+  mysql-data:
+  redis-data:
+  minio-data:
