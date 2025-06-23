@@ -33,6 +33,10 @@ type Config struct {
 		UseSSL          bool   `mapstructure:"use_ssl"`
 		BucketName      string `mapstructure:"bucket_name"`
 	} `mapstructure:"minio"`
+	RabbitMQ struct {
+		URL            string `mapstructure:"url"`
+		TranscodeQueue string `mapstructure:"transcode_queue"`
+	} `mapstructure:"rabbitmq"`
 }
 
 // Init 函数用于初始化配置加载

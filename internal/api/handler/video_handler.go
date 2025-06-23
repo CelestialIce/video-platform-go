@@ -37,3 +37,26 @@ func InitiateUpload(c *gin.Context) {
 		"video_id":   video.ID,
 	})
 }
+
+type CompleteUploadRequest struct {
+	VideoID uint64 `json:"video_id" binding:"required"`
+}
+
+func CompleteUpload(c *gin.Context) {
+	var req CompleteUploadRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid video ID"})
+		return
+	}
+
+	// 可以在这里加一层验证，确保操作者是视频的上传者
+	// userIDVal, _ := c.Get("user_id") ...
+
+	err := service.CompleteUploadService(req.VideoID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Transcoding task has been submitted"})
+}

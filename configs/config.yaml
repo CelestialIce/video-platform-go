@@ -20,3 +20,7 @@ minio:
   secret_access_key: "minioadmin" # 这也是 docker-compose.yml 中定义的
   use_ssl: false # 本地开发，不使用 HTTPS
   bucket_name: "videos" # 我们将要把视频存放到这个桶里
+
+rabbitmq:
+  url: "amqp://user:password@127.0.0.1:5672/" # 这是 docker-compose 中定义的用户和密码
+  transcode_queue: "video_transcoding_queue" # 我们给转码任务队列起个名字

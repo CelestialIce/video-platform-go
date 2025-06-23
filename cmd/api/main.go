@@ -23,6 +23,7 @@ func main() {
 	// 2. 初始化数据库
 	dal.InitMySQL(&config.AppConfig)
 	dal.InitMinIO(&config.AppConfig) // <-- 新增这一行
+	dal.InitRabbitMQ(&config.AppConfig) // <-- 新增这一行
 	log.Println("Database initialized")
 
 	// 3. 设置 Gin 引擎
@@ -58,8 +59,10 @@ func main() {
 			{
 				// POST /api/v1/videos/upload/initiate
 				videoRoutes.POST("/upload/initiate", handler.InitiateUpload)
+				// POST /api/v1/videos/upload/complete
+				videoRoutes.POST("/upload/complete", handler.CompleteUpload) // <-- 新增这一行
 			}
-			}
+		}
 	}
 
 	// 5. 启动服务器
