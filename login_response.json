@@ -1,0 +1,36 @@
+{"message":"Login successful","token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTA5MjQ2NzAsImlhdCI6MTc1MDY2NTQ3MCwicm9sZSI6InVzZXIiLCJ1c2VyX2lkIjoxfQ.9qzWWCMQEa3y930UCPKhz55Yxj7t0K9RHxMGSASrXuU"}
+curl -X POST http://localhost:8000/api/v1/videos/upload/initiate \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTA5MjQ2NzAsImlhdCI6MTc1MDY2NTQ3MCwicm9sZSI6InVzZXIiLCJ1c2VyX2lkIjoxfQ.9qzWWCMQEa3y930UCPKhz55Yxj7t0K9RHxMGSASrXuU" \
+-H "Content-Type: application/json" \
+-d '{
+    "file_name": "my-cool-video.mp4"
+}'
+
+curl -T ~/Downloads/test.mp4 "http://127.0.0.1:9000/videos/raw/1/my-cool-video.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Credential=minioadmin%2F20250623%2Fus-east-1%2Fs3%2Faws4_request\u0026X-Amz-Date=20250623T075829Z\u0026X-Amz-Expires=86400\u0026X-Amz-SignedHeaders=host\u0026X-Amz-Signature=00d9400a272ec6666e1d46e3d6e10c230423d4c696ae829a62b2c850f8d664d9"
+
+# 先登录获取 Token
+TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "password": "password123"}' | jq -r '.token')
+
+# 检查一下 Token 是否获取成功
+echo "获取到的Token是: $TOKEN"
+
+# 用获取到的Token去请求上传地址，并存入变量 UPLOAD_URL
+UPLOAD_URL=$(curl -s -X POST http://localhost:8000/api/v1/videos/upload/initiate \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"file_name": "my-cool-video.mp4"}' | jq -r '.upload_url')
+
+# 检查一下 URL 是否获取成功
+echo "获取到的上传URL是: $UPLOAD_URL"
+
+# 把 YOUR_JWT_TOKEN 和 video_id 换成你自己的
+curl -X POST http://localhost:8000/api/v1/videos/upload/complete \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTA5MjQ2NzAsImlhdCI6MTc1MDY2NTQ3MCwicm9sZSI6InVzZXIiLCJ1c2VyX2lkIjoxfQ.9qzWWCMQEa3y930UCPKhz55Yxj7t0K9RHxMGSASrXuU" \
+-H "Content-Type: application/json" \
+-d '{
+    "video_id": 2
+}'
+
+curl -X POST http://localhost:8000/api/v1/videos/1/comments -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTA5MjQ2NzAsImlhdCI6MTc1MDY2NTQ3MCwicm9sZSI6InVzZXIiLCJ1c2VyX2lkIjoxfQ.9qzWWCMQEa3y930UCPKhz55Yxj7t0K9RHxMGSASrXuU" -H "Content-Type: application/json" -d '{"content": "这个视频太棒了！"}'
