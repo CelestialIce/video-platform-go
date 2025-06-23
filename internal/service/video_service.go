@@ -11,6 +11,7 @@ import (
 	// "github.com/minio/minio-go/v7" - Unused import
 	"encoding/json" // 确保导入
 	"fmt"             // 确保导入
+    "net/url" // 确保导入
 )
 
 // TranscodeTaskPayload 是我们要发送到消息队列的任务内容
@@ -72,4 +73,56 @@ func InitiateUploadService(userID uint64, fileName string) (string, *model.Video
 	return presignedURL.String(), &video, nil
 }
 
-// ... 之后我们会在这里添加 CompleteUploadService ...
+// ListVideosService 获取视频列表（带分页）
+func ListVideosService(limit, offset int) ([]model.Video, int64, error) {
+	var videos []model.Video
+	var total int64
+
+	// 我们只展示状态为 'online' 的视频
+	db := dal.DB.Model(&model.Video{}).Where("status = ?", "online")
+
+	// 计算总数
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// 获取分页数据
+	if err := db.Order("created_at desc").Limit(limit).Offset(offset).Find(&videos).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return videos, total, nil
+}
+
+// GetVideoDetailsService 获取单个视频的详细信息，包括它的所有可用播放源
+func GetVideoDetailsService(videoID uint64) (*model.Video, []model.VideoSource, error) {
+	var video model.Video
+	if err := dal.DB.First(&video, videoID).Error; err != nil {
+		return nil, nil, fmt.Errorf("video not found: %w", err)
+	}
+
+	var sources []model.VideoSource
+	if err := dal.DB.Where("video_id = ?", videoID).Find(&sources).Error; err != nil {
+		return nil, nil, err
+	}
+
+	// 为每个播放源生成带签名的临时 URL
+	for i := range sources {
+		reqParams := make(url.Values)
+		// 如果你的 MinIO 桶是公开读的，这一步可以省略
+		// 但为了安全，桶应该是私有的，所有访问都通过签名 URL
+		presignedURL, err := dal.MinioClient.PresignedGetObject(context.Background(),
+			config.AppConfig.MinIO.BucketName,
+			sources[i].URL, // sources[i].URL 里存的是对象路径，例如 processed/1/hls_720p/720p.m3u8
+			time.Minute*15, // 设置一个较短的有效期，例如15分钟
+			reqParams,
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to generate presigned url for source %s: %w", sources[i].URL, err)
+		}
+		// 用签名的 URL 替换掉数据库里的永久路径
+		sources[i].URL = presignedURL.String()
+	}
+
+	return &video, sources, nil
+}
