@@ -3,8 +3,6 @@ package tables
 
 import "github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
 
-// Generators is a map of table models.
-//
 // The key of Generators is the prefix of table info url.
 // The corresponding value is the Form and Table data.
 //
@@ -12,9 +10,18 @@ import "github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
 //
 // example:
 //
-// example end
+// "comments" => http://localhost:9033/admin/info/comments
+// "users" => http://localhost:9033/admin/info/users
+// "video_sources" => http://localhost:9033/admin/info/video_sources
+// "videos" => http://localhost:9033/admin/info/videos
 //
+// example end
 var Generators = map[string]table.Generator{
+
+	"comments":      GetCommentsTable,
+	"users":         GetUsersTable,
+	"video_sources": GetVideosourcesTable,
+	"videos":        GetVideosTable,
 
 	// generators end
 }

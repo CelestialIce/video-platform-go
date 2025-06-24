@@ -49,6 +49,7 @@ func startServer() {
 	})
 
 	models.Init(eng.MysqlConnection())
+	
 
 	_ = r.Run(":9094")
 
