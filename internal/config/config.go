@@ -21,7 +21,11 @@ type Config struct {
 		Port string `mapstructure:"port"`
 	} `mapstructure:"server"`
 	MySQL struct {
-		DSN string `mapstructure:"dsn"`
+		Host     string `mapstructure:"host"`
+		Port     string `mapstructure:"port"`
+		User     string `mapstructure:"user"`
+		Password string `mapstructure:"password"`
+		Database string `mapstructure:"database"`
 	} `mapstructure:"mysql"`
 	Redis struct {
 		Addr     string `mapstructure:"addr"`

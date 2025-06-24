@@ -3,6 +3,7 @@ package dal
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"github.com/cjh/video-platform-go/internal/config" // 确认是新的模块路径
 	"github.com/minio/minio-go/v7"
@@ -16,16 +17,26 @@ var (
 	MinioClient *minio.Client
 )
 
-// InitMySQL 初始化数据库连接
+// InitMySQL 初始化数据库连接 (V2版，兼容新配置)
 func InitMySQL(cfg *config.Config) {
 	var err error
-	dsn := cfg.MySQL.DSN
+
+	// 从独立的配置字段拼接 DSN 字符串
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		cfg.MySQL.User,
+		cfg.MySQL.Password,
+		cfg.MySQL.Host,
+		cfg.MySQL.Port,
+		cfg.MySQL.Database,
+	)
+
 	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	log.Println("Database connection established")
 }
+
 
 // InitMinIO 初始化 MinIO 客户端
 func InitMinIO(cfg *config.Config) {

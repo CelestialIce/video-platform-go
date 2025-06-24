@@ -3,7 +3,11 @@ server:
   port: ":8000" # API 服务的监听端口
 
 mysql:
-  dsn: "root:your_strong_password@tcp(127.0.0.1:3306)/video_platform_mvp?charset=utf8mb4&parseTime=True&loc=Local"
+  host: "127.0.0.1"
+  port: "3306"
+  user: "root"
+  password: "your_strong_password" # <-- 换成你自己的密码
+  database: "video_platform_mvp"
 
 redis:
   addr: "127.0.0.1:6379"
