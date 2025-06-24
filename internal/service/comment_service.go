@@ -2,22 +2,32 @@
 package service
 
 import (
+	"log"
+
 	"github.com/cjh/video-platform-go/internal/dal"
 	"github.com/cjh/video-platform-go/internal/dal/model"
 )
 
-// CreateCommentService 创建评论
+// CreateCommentService 创建评论 (V2版，返回带用户信息)
 func CreateCommentService(userID, videoID uint64, content string, timeline *uint) (*model.Comment, error) {
 	comment := model.Comment{
 		UserID:   userID,
 		VideoID:  videoID,
 		Content:  content,
-		Timeline: timeline, // 可以是 nil，代表普通评论
+		Timeline: timeline,
 	}
 
+	// 1. 先创建评论
 	if err := dal.DB.Create(&comment).Error; err != nil {
 		return nil, err
 	}
+
+	// 2. 创建成功后，使用 Preload 重新查询，以加载 User 信息
+	if err := dal.DB.Preload("User").First(&comment, comment.ID).Error; err != nil {
+		// 即使查询失败，评论也已创建成功，所以只记录错误，但返回已创建的 comment
+		log.Printf("Failed to preload user for new comment: %v", err)
+	}
+	
 	return &comment, nil
 }
 

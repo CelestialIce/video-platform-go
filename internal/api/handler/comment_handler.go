@@ -26,7 +26,7 @@ type CommentInfo struct {
 	} `json:"user"`
 }
 
-// CreateComment 创建评论或弹幕
+// CreateComment 创建评论或弹幕 (V2版，返回一致的结构)
 func CreateComment(c *gin.Context) {
 	videoID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -49,7 +49,17 @@ func CreateComment(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, comment)
+	// 构造和 ListComments 一致的响应结构
+	response := CommentInfo{
+		ID:        comment.ID,
+		Content:   comment.Content,
+		Timeline:  comment.Timeline,
+		CreatedAt: comment.CreatedAt,
+	}
+	response.User.ID = comment.User.ID
+	response.User.Nickname = comment.User.Nickname
+
+	c.JSON(http.StatusCreated, response)
 }
 
 // ListComments 获取评论列表 (V2版)

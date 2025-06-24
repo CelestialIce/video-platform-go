@@ -104,10 +104,19 @@ func HandleTranscode(videoID uint64) error {
 		// 上传转码后的文件
 		processedPathPrefix := filepath.ToSlash(filepath.Join("processed", fmt.Sprintf("%d", videoID), fmt.Sprintf("hls_%s", profile.Name)))
 		files, _ := os.ReadDir(outputDir)
+		var totalSize uint64 // <-- 新增：用于累加文件大小
 		for _, file := range files {
-			_, err := dal.MinioClient.FPutObject(context.Background(), bucketName,
+			localFilePath := filepath.Join(outputDir, file.Name())
+
+			// 获取文件信息以得到大小
+			fileInfo, err := os.Stat(localFilePath)
+			if err == nil {
+				totalSize += uint64(fileInfo.Size()) // <-- 新增：累加大小
+			}
+
+			_, err = dal.MinioClient.FPutObject(context.Background(), bucketName,
 				filepath.ToSlash(filepath.Join(processedPathPrefix, file.Name())),
-				filepath.Join(outputDir, file.Name()),
+				localFilePath,
 				minio.PutObjectOptions{},
 			)
 			if err != nil {
@@ -122,6 +131,7 @@ func HandleTranscode(videoID uint64) error {
 			Quality: profile.Name,
 			Format:  "HLS",
 			URL:     filepath.ToSlash(filepath.Join(processedPathPrefix, fmt.Sprintf("%s.m3u8", profile.Name))),
+			FileSize: totalSize, // <-- 新增：填充文件大小
 		})
 	}
 
