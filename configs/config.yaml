@@ -24,3 +24,12 @@ minio:
 rabbitmq:
   url: "amqp://user:password@127.0.0.1:5672/" # 这是 docker-compose 中定义的用户和密码
   transcode_queue: "video_transcoding_queue" # 我们给转码任务队列起个名字
+
+ffmpeg:
+  profiles:
+    - name: "360p"
+      resolution: "-2:360"
+    - name: "720p"
+      resolution: "-2:720"
+    - name: "1080p"
+      resolution: "-2:1080"

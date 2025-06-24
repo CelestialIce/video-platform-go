@@ -21,10 +21,10 @@ func CreateCommentService(userID, videoID uint64, content string, timeline *uint
 	return &comment, nil
 }
 
-// ListCommentsService 获取视频的评论列表
+// ListCommentsService 获取视频的评论列表 (V2版，带用户信息)
 func ListCommentsService(videoID uint64) ([]model.Comment, error) {
 	var comments []model.Comment
-	// 按创建时间正序排列
-	err := dal.DB.Where("video_id = ?", videoID).Order("created_at asc").Find(&comments).Error
+	// 使用 Preload("User") 来预加载关联的用户数据
+	err := dal.DB.Preload("User").Where("video_id = ?", videoID).Order("created_at asc").Find(&comments).Error
 	return comments, err
 }

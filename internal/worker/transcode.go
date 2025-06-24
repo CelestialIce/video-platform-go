@@ -3,115 +3,151 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"	
+
 	"github.com/cjh/video-platform-go/internal/config"
 	"github.com/cjh/video-platform-go/internal/dal"
 	"github.com/cjh/video-platform-go/internal/dal/model"
 	"github.com/minio/minio-go/v7"
 )
 
-// HandleTranscode 是处理转码任务的核心函数
+// ffprobe 用于解析视频信息的结构体
+type ffprobeFormat struct {
+	Duration string `json:"duration"`
+}
+type ffprobeOutput struct {
+	Format ffprobeFormat `json:"format"`
+}
+
+// HandleTranscode 是处理转码任务的核心函数 (V2版)
 func HandleTranscode(videoID uint64) error {
-	// 0. 从数据库获取视频信息
+	// --- 0. 准备工作 ---
 	var video model.Video
 	if err := dal.DB.First(&video, videoID).Error; err != nil {
 		return fmt.Errorf("video %d not found: %w", videoID, err)
 	}
 
-	// 1. 创建临时工作目录
 	tempDir, err := os.MkdirTemp("", fmt.Sprintf("video-%d-*", videoID))
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %w", err)
 	}
 	defer os.RemoveAll(tempDir) // 保证函数结束时删除临时目录
 
-	// 2. 从 MinIO 下载原始视频
 	bucketName := config.AppConfig.MinIO.BucketName
-	// 原始文件路径我们当时是这样设计的：raw/{video_id}/{file_name}
-	// 但 file_name 我们没有存，可以从 video.Title 读取（因为我们用它做了标题）
-	// 更稳妥的做法是在 videos 表加一个 original_object_name 字段
-	// 这里我们先用 Title 简化处理
 	rawObjectName := filepath.Join("raw", fmt.Sprintf("%d", video.ID), video.Title)
 	localRawPath := filepath.Join(tempDir, video.Title)
 
-	err = dal.MinioClient.FGetObject(context.Background(), bucketName, rawObjectName, localRawPath, minio.GetObjectOptions{})
-	if err != nil {
+	if err := dal.MinioClient.FGetObject(context.Background(), bucketName, rawObjectName, localRawPath, minio.GetObjectOptions{}); err != nil {
 		dal.DB.Model(&video).Update("status", "failed")
 		return fmt.Errorf("failed to download from minio: %w", err)
 	}
 	log.Printf("Downloaded %s to %s", rawObjectName, localRawPath)
 
-	// 3. 执行 FFMPEG 转码 (以720p为例)
-	outputDir := filepath.Join(tempDir, "hls_720p")
-	os.Mkdir(outputDir, 0755)
-	outputM3u8 := filepath.Join(outputDir, "720p.m3u8")
-
-	// ffmpeg -i [输入文件] -c:v libx264 -c:a aac -vf "scale=-2:720" -hls_time 10 -hls_list_size 0 -f hls [输出.m3u8]
-	cmd := exec.Command("ffmpeg",
-		"-i", localRawPath,
-		"-c:v", "libx264",
-		"-c:a", "aac",
-		"-vf", "scale=-2:720", // 保持宽高比，高度为720p
-		"-hls_time", "10", // 每个 ts 切片 10 秒
-		"-hls_list_size", "0", // 0表示保留所有切片
-		"-f", "hls",
-		outputM3u8,
-	)
-
-	log.Printf("Executing ffmpeg command: %s", cmd.String())
-	output, err := cmd.CombinedOutput() // 获取标准输出和错误输出
+	// --- 1. 获取视频信息 (时长和封面) ---
+	// 1.1 获取时长
+	cmdProbe := exec.Command("ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", localRawPath)
+	outputProbe, err := cmdProbe.CombinedOutput()
 	if err != nil {
-		log.Printf("FFMPEG error output: %s", string(output))
-		dal.DB.Model(&video).Update("status", "failed")
-		return fmt.Errorf("ffmpeg command failed: %w", err)
+		log.Printf("ffprobe failed: %s", string(outputProbe))
+		return fmt.Errorf("ffprobe command failed: %w", err)
 	}
-	log.Printf("FFMPEG success output: %s", string(output))
+	var probeData ffprobeOutput
+	json.Unmarshal(outputProbe, &probeData)
+	durationFloat, _ := strconv.ParseFloat(probeData.Format.Duration, 64)
+	durationUint := uint(durationFloat)
 
-	// 4. 将转码后的 HLS 文件上传到 MinIO
-	processedPathPrefix := filepath.Join("processed", fmt.Sprintf("%d", video.ID), "hls_720p")
-
-	files, err := os.ReadDir(outputDir)
-	if err != nil {
-		return fmt.Errorf("failed to read HLS output dir: %w", err)
+	// 1.2 截取封面图 (视频第1秒)
+	coverPath := filepath.Join(tempDir, "cover.jpg")
+	cmdCover := exec.Command("ffmpeg", "-i", localRawPath, "-ss", "00:00:01.000", "-vframes", "1", coverPath)
+	if outputCover, err := cmdCover.CombinedOutput(); err != nil {
+		log.Printf("Failed to generate cover: %s", string(outputCover))
+		// 封面生成失败不是致命错误，可以继续
 	}
 
-	for _, file := range files {
-		localFilePath := filepath.Join(outputDir, file.Name())
-		remoteObjectName := filepath.Join(processedPathPrefix, file.Name())
+	// 1.3 上传封面图
+	coverObjectName := filepath.Join("processed", fmt.Sprintf("%d", videoID), "cover.jpg")
+	if _, err := dal.MinioClient.FPutObject(context.Background(), bucketName, coverObjectName, coverPath, minio.PutObjectOptions{}); err != nil {
+		log.Printf("Failed to upload cover: %v", err)
+		// 上传失败也不是致命错误
+	}
 
-		_, err := dal.MinioClient.FPutObject(context.Background(), bucketName, remoteObjectName, localFilePath, minio.PutObjectOptions{})
-		if err != nil {
+	// --- 2. 循环执行多码率转码 ---
+	profiles := config.AppConfig.FFMpeg.Profiles
+	var newVideoSources []model.VideoSource
+
+	for _, profile := range profiles {
+		outputDir := filepath.Join(tempDir, fmt.Sprintf("hls_%s", profile.Name))
+		os.Mkdir(outputDir, 0755)
+		outputM3u8 := filepath.Join(outputDir, fmt.Sprintf("%s.m3u8", profile.Name))
+
+		cmdTranscode := exec.Command("ffmpeg",
+			"-i", localRawPath,
+			"-c:v", "libx264", "-c:a", "aac",
+			"-vf", "scale="+profile.Resolution,
+			"-hls_time", "10", "-hls_list_size", "0",
+			"-f", "hls", outputM3u8,
+		)
+
+		log.Printf("Executing ffmpeg for profile %s: %s", profile.Name, cmdTranscode.String())
+		if output, err := cmdTranscode.CombinedOutput(); err != nil {
+			log.Printf("FFMPEG error for profile %s: %s", profile.Name, string(output))
 			dal.DB.Model(&video).Update("status", "failed")
-			return fmt.Errorf("failed to upload HLS file %s: %w", file.Name(), err)
+			return fmt.Errorf("ffmpeg command failed for profile %s: %w", profile.Name, err)
 		}
-	}
-	log.Printf("Uploaded HLS files to %s", processedPathPrefix)
 
-	// 5. 更新数据库
-	// 开启一个事务来确保数据一致性
+		// 上传转码后的文件
+		processedPathPrefix := filepath.ToSlash(filepath.Join("processed", fmt.Sprintf("%d", videoID), fmt.Sprintf("hls_%s", profile.Name)))
+		files, _ := os.ReadDir(outputDir)
+		for _, file := range files {
+			_, err := dal.MinioClient.FPutObject(context.Background(), bucketName,
+				filepath.ToSlash(filepath.Join(processedPathPrefix, file.Name())),
+				filepath.Join(outputDir, file.Name()),
+				minio.PutObjectOptions{},
+			)
+			if err != nil {
+				dal.DB.Model(&video).Update("status", "failed")
+				return fmt.Errorf("failed to upload HLS file %s: %w", file.Name(), err)
+			}
+		}
+
+		// 准备要写入数据库的 video_source
+		newVideoSources = append(newVideoSources, model.VideoSource{
+			VideoID: video.ID,
+			Quality: profile.Name,
+			Format:  "HLS",
+			URL:     filepath.ToSlash(filepath.Join(processedPathPrefix, fmt.Sprintf("%s.m3u8", profile.Name))),
+		})
+	}
+
+	// --- 3. 使用数据库事务，一次性更新所有信息 ---
 	tx := dal.DB.Begin()
-	m3u8URL := filepath.ToSlash(filepath.Join(processedPathPrefix, "720p.m3u8")) // 确保是 / 分隔符
-	// 创建视频源记录
-	videoSource := model.VideoSource{
-		VideoID: video.ID,
-		Quality: "720p",
-		Format:  "HLS",
-		URL:     m3u8URL,
+	if tx.Error != nil {
+		return tx.Error
 	}
-	if err := tx.Create(&videoSource).Error; err != nil {
+
+	// 3.1 更新主视频表信息 (时长, 封面, 状态)
+	updates := map[string]interface{}{
+		"status":    "online",
+		"duration":  durationUint,
+		"cover_url": filepath.ToSlash(coverObjectName),
+	}
+	if err := tx.Model(&video).Updates(updates).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// 更新主视频表状态
-	if err := tx.Model(&video).Update("status", "online").Error; err != nil {
+	// 3.2 批量创建视频源记录
+	if err := tx.Create(&newVideoSources).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
+	log.Println("Successfully updated database in a transaction.")
 	return tx.Commit().Error
 }

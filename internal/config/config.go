@@ -9,6 +9,12 @@ import (
 // 全局配置变量
 var AppConfig Config
 
+// Profile 定义了一个转码配置
+type Profile struct {
+	Name       string `mapstructure:"name"`
+	Resolution string `mapstructure:"resolution"`
+}
+
 // Config 结构体，与 config.yaml 文件对应
 type Config struct {
 	Server struct {
@@ -37,6 +43,9 @@ type Config struct {
 		URL            string `mapstructure:"url"`
 		TranscodeQueue string `mapstructure:"transcode_queue"`
 	} `mapstructure:"rabbitmq"`
+	FFMpeg struct {
+		Profiles []Profile `mapstructure:"profiles"`
+	} `mapstructure:"ffmpeg"`
 }
 
 // Init 函数用于初始化配置加载
