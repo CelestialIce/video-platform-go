@@ -715,3 +715,185 @@ swag init -g ./cmd/api/main.go
 ```
 
 现在 `video_handler.go` 应该可以正常编译，`swag init` 也会把新的 `VideoInfo` 显示在接口文档里。如果还有任何类型或编译错误，把报错贴出来即可继续排查。
+
+
+下面给出一份**从零到跑通**的指南，假设你在 **Linux/macOS** 开发机上。本质步骤：
+
+1. 安装依赖
+2. 启动基础服务（数据库、MinIO、RabbitMQ）
+3. 生成 Swagger 文档
+4. 启动三个 Go 进程（API Server / Worker / Admin 站）
+5. 访问 Swagger UI 与业务接口
+
+> 如果你的环境已经有 Docker、Go 1.22+ 等，可直接跳到 **步骤 ②**。
+
+---
+
+## ① 环境准备
+
+| 组件                          | 版本建议                                                | 作用                        |
+| --------------------------- | --------------------------------------------------- | ------------------------- |
+| **Go**                      | ≥ 1.22                                              | 编译 / 运行后端                 |
+| **Docker & Docker Compose** | 最新稳定版                                               | 一键启动 MySQL、MinIO、RabbitMQ |
+| **Swag CLI**                | `go install github.com/swaggo/swag/cmd/swag@latest` | 生成 Swagger 文档             |
+| **Make** (可选)               |                                                     | 项目自带 Makefile，省事          |
+
+```bash
+# 安装 swag
+go install github.com/swaggo/swag/cmd/swag@latest
+# GOPATH/bin 要在 PATH 中，或者用 $(go env GOPATH)/bin/swag
+```
+
+---
+
+## ② 启动基础服务
+
+项目根目录已经有 `docker-compose.yml`，一次性拉起 **MySQL + MinIO + RabbitMQ**（或你自己定义的服务）。
+
+```bash
+docker compose pull          # 拉取镜像
+docker compose up -d         # 后台启动
+docker compose ps            # 查看容器状态
+```
+
+> 默认端口示例
+>
+> * MySQL: `127.0.0.1:3306`
+> * MinIO: `127.0.0.1:9000` (UI) / `9001` (API)
+> * RabbitMQ: `127.0.0.1:15672` (Management UI) / `5672` (AMQP)
+
+如果你想改账号密码、桶名等，编辑 `configs/config.yaml` & `docker-compose.yml` 保持一致。
+
+---
+
+## ③ 初始化数据库（可选）
+
+仓库里有若干 `.sql` 脚本（`admin.sql`, `create_admin_tables.sql`, `drop.sql`）。若你用了空库，执行：
+
+```bash
+docker exec -i <mysql-container> mysql -uroot -pYOURPWD < admin.sql
+```
+
+或者跳过：运行时由 GORM 自动迁移生成表结构。
+
+---
+
+## ④ 生成 Swagger 文档
+
+```bash
+# 在项目根
+swag init -g ./cmd/api/main.go
+# docs/swagger.json docs/swagger.yaml 会自动生成
+```
+
+如果 `go run golang.org/x/tools/cmd/goimports -w ./internal/...` 提示 import 顺序问题，先整理再 swag。
+
+---
+
+## ⑤ 启动 Go 服务
+
+### 1. API Server
+
+```bash
+go run ./cmd/api
+# 或者
+make api
+```
+
+默认监听 `:8000`（如 `configs/config.yaml` 配置）。
+
+> 访问 `http://localhost:8000/swagger/index.html` 查看文档。
+> 如果 swagger UI 404，请确认 `r.GET("/swagger/*any", ginSwagger.WrapHandler(...))` 已在 `cmd/api/main.go` 注册。
+
+### 2. 后台管理站（可选）
+
+```bash
+go run ./cmd/admin
+# 或 make admin
+```
+
+默认监听 `:8080`。涉及 gin-admin 模板、静态文件等。
+
+### 3. Worker（视频转码任务消费者）
+
+```bash
+go run ./cmd/worker
+# 或 make worker
+```
+
+Worker 会监听 RabbitMQ `transcode` 队列，把上传好的视频转码并写回 MinIO / 数据库。
+
+> **必须** Worker 在跑，前端把视频上传完并 `POST /videos/upload/complete` 后才会推进状态到 `online`。
+
+---
+
+## ⑥ 上传与播放完整链路（本地验证）
+
+1. **初始化上传**
+
+   ```bash
+   curl -X POST http://localhost:8000/videos/upload/initiate \
+     -H "Authorization: Bearer <JWT>" \
+     -d '{"file_name":"holiday.mp4"}'
+   ```
+
+   返回 `upload_url` + `video_id`。
+
+2. **PUT 上传文件**（示例用 `curl --upload-file`，也可用 MinIO Client / SDK）
+
+   ```bash
+   curl -T ./holiday.mp4 "<upload_url>"
+   ```
+
+3. **通知完成**
+
+   ```bash
+   curl -X POST http://localhost:8000/videos/upload/complete \
+     -H "Authorization: Bearer <JWT>" \
+     -d '{"video_id":123}'
+   ```
+
+4. **Worker 自动转码** ➜ `status` 变 `online`。
+
+5. **列表 / 播放**
+
+   ```bash
+   curl http://localhost:8000/videos?limit=10
+   curl http://localhost:8000/videos/123
+   ```
+
+---
+
+## ⑦ 常用排错命令
+
+| 场景           | 命令                                                            |
+| ------------ | ------------------------------------------------------------- |
+| 看容器日志        | `docker compose logs -f mysql`                                |
+| 数据库 shell    | `docker exec -it <mysql-container> mysql -uroot -p`           |
+| 检查队列堆积       | 打开 [http://localhost:15672](http://localhost:15672)，Queues 面板 |
+| 查看 Worker 输出 | `go run ./cmd/worker` 或 `docker logs -f worker`（如用容器）         |
+| MinIO 预签名异常  | 确认 `configs/config.yaml` 中的 AccessKey / SecretKey 与容器一致       |
+
+---
+
+## ⑧ FAQ
+
+| 问题                      | 解决                                                           |
+| ----------------------- | ------------------------------------------------------------ |
+| `swag init` 找不到 `gin.H` | 已改为统一的 `ErrorResponse` / DTO，确保最新代码                          |
+| 端口冲突                    | 修改 `configs/config.yaml` 里 server 端口或 docker-compose 端口映射    |
+| “access denied” 上传失败    | 确认 MinIO 桶策略为私有 + 使用预签名 URL 上传                               |
+| Worker 连不上 RabbitMQ     | 检查 `amqp://user:pass@rabbitmq:5672/` URL 是否对、RabbitMQ 容器是否启动 |
+
+---
+
+现在，浏览器打开：
+
+```
+http://localhost:8000/swagger/index.html      # API 文档
+http://localhost:9000                         # MinIO 控制台 (admin / password)
+http://localhost:15672                        # RabbitMQ 管理界面 (guest / guest)
+```
+
+即可完整体验 **Video Platform Go**。
+如果某一步骤仍有疑问，把错误日志或行为描述贴出来，我再帮你定位！
