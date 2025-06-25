@@ -10,7 +10,31 @@ import (
 	"github.com/cjh/video-platform-go/internal/config"
 	"github.com/cjh/video-platform-go/internal/dal"
 	"github.com/gin-gonic/gin"
+
+	// --- Swagger 相关的 import ---
+	_ "github.com/cjh/video-platform-go/docs" // 这个路径是你的【模块名】+/【输出目录名】
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+// @title           视频平台 API 文档 (Video Platform API)
+// @version         1.0
+// @description     这是一个使用 Go 构建的视频平台后端 API 服务。
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8000
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 
 func main() {
 	// 1. 初始化配置
@@ -25,6 +49,9 @@ func main() {
 
 	// 3. 设置 Gin 引擎
 	r := gin.Default()
+
+	// --- 新增：设置 Swagger 路由 ---
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 4. 设置路由
 	apiV1 := r.Group("/api/v1")

@@ -1,0 +1,431 @@
+basePath: /api/v1
+definitions:
+  handler.CommentInfo:
+    properties:
+      content:
+        example: Great video!
+        type: string
+      created_at:
+        example: "2025-06-25T11:34:00Z"
+        type: string
+      id:
+        example: 1
+        type: integer
+      timeline:
+        example: 15
+        type: integer
+      user:
+        properties:
+          id:
+            example: 2
+            type: integer
+          nickname:
+            example: Tom
+            type: string
+        type: object
+    type: object
+  handler.CompleteUploadRequest:
+    properties:
+      video_id:
+        example: 123
+        type: integer
+    required:
+    - video_id
+    type: object
+  handler.CreateCommentRequest:
+    properties:
+      content:
+        example: Great video!
+        type: string
+      timeline:
+        description: 可选弹幕时间点（秒）
+        example: 15
+        type: integer
+    required:
+    - content
+    type: object
+  handler.ErrorResponse:
+    properties:
+      error:
+        example: Invalid request body
+        type: string
+    type: object
+  handler.InitiateUploadRequest:
+    properties:
+      file_name:
+        example: holiday.mp4
+        type: string
+    required:
+    - file_name
+    type: object
+  handler.InitiateUploadResponse:
+    properties:
+      upload_url:
+        example: https://minio.local/presigned-url
+        type: string
+      video_id:
+        example: 123
+        type: integer
+    type: object
+  handler.ListVideosResponse:
+    properties:
+      total:
+        example: 100
+        type: integer
+      videos:
+        items:
+          $ref: '#/definitions/handler.VideoInfo'
+        type: array
+    type: object
+  handler.LoginRequest:
+    properties:
+      email:
+        example: tom@example.com
+        type: string
+      password:
+        example: secret123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.LoginResponse:
+    properties:
+      message:
+        example: Login successful
+        type: string
+      token:
+        example: <jwt>
+        type: string
+    type: object
+  handler.MessageResponse:
+    properties:
+      message:
+        example: Transcoding task has been submitted
+        type: string
+    type: object
+  handler.RegisterRequest:
+    properties:
+      email:
+        example: tom@example.com
+        type: string
+      nickname:
+        example: Tom
+        type: string
+      password:
+        example: secret123
+        minLength: 6
+        type: string
+    required:
+    - email
+    - nickname
+    - password
+    type: object
+  handler.RegisterResponse:
+    properties:
+      message:
+        example: User registered successfully
+        type: string
+      user_id:
+        example: 1
+        type: integer
+    type: object
+  handler.VideoDetailsResponse:
+    properties:
+      sources: {}
+      video: {}
+    type: object
+  handler.VideoInfo:
+    properties:
+      cover_url:
+        example: https://example.com/cover.jpg
+        type: string
+      created_at:
+        example: "2025-06-20T09:00:00Z"
+        type: string
+      description:
+        example: A short description
+        type: string
+      duration:
+        example: 3600
+        type: integer
+      id:
+        example: 123
+        type: integer
+      status:
+        example: online
+        type: string
+      title:
+        example: My Holiday
+        type: string
+    type: object
+host: localhost:8000
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: 这是一个使用 Go 构建的视频平台后端 API 服务。
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: 视频平台 API 文档 (Video Platform API)
+  version: "1.0"
+paths:
+  /users/login:
+    post:
+      consumes:
+      - application/json
+      description: 根据邮箱和密码进行登录，成功后返回 JWT Token
+      parameters:
+      - description: 登录请求体
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: 用户登录
+      tags:
+      - 用户
+  /users/register:
+    post:
+      consumes:
+      - application/json
+      description: 根据用户提供的昵称、邮箱和密码进行注册
+      parameters:
+      - description: 注册请求体
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.RegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: 用户注册
+      tags:
+      - 用户
+  /videos:
+    get:
+      parameters:
+      - default: 10
+        description: 每页数量
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: 偏移量
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ListVideosResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: 获取视频列表
+      tags:
+      - 视频
+  /videos/{id}:
+    get:
+      parameters:
+      - description: 视频 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.VideoDetailsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: 获取视频详情
+      tags:
+      - 视频
+  /videos/{id}/comments:
+    get:
+      description: 根据视频 ID 获取评论 / 弹幕列表
+      parameters:
+      - description: 视频 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.CommentInfo'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: 获取评论列表
+      tags:
+      - 评论
+    post:
+      consumes:
+      - application/json
+      description: 需要登录。根据视频 ID 创建评论或弹幕
+      parameters:
+      - description: 视频 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 评论内容
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.CommentInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 创建评论 / 弹幕
+      tags:
+      - 评论
+  /videos/upload/complete:
+    post:
+      consumes:
+      - application/json
+      description: 通知后端开始转码
+      parameters:
+      - description: 视频 ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CompleteUploadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 完成视频上传
+      tags:
+      - 视频
+  /videos/upload/initiate:
+    post:
+      consumes:
+      - application/json
+      description: 生成预签名上传 URL
+      parameters:
+      - description: 文件名
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.InitiateUploadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.InitiateUploadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: 初始化视频上传
+      tags:
+      - 视频
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

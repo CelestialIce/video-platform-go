@@ -1,42 +1,60 @@
-// internal/api/handler/comment_handler.go
 package handler
 
 import (
 	"net/http"
 	"strconv"
 	"time"
+
 	"github.com/cjh/video-platform-go/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
+// ---------- 请求 / 响应 DTO ----------
+
+// CreateCommentRequest 创建评论 / 弹幕请求体
 type CreateCommentRequest struct {
-	Content  string `json:"content" binding:"required"`
-	Timeline *uint  `json:"timeline"` // 弹幕时间点，可选
+	Content  string `json:"content"  binding:"required" example:"Great video!"`
+	Timeline *uint  `json:"timeline" example:"15"` // 可选弹幕时间点（秒）
 }
 
-// CommentInfo 是我们要返回给前端的评论结构
+// CommentInfo 评论信息（用于列表和单条返回）
 type CommentInfo struct {
-	ID        uint64    `json:"id"`
-	Content   string    `json:"content"`
-	Timeline  *uint     `json:"timeline,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        uint64    `json:"id"         example:"1"`
+	Content   string    `json:"content"    example:"Great video!"`
+	Timeline  *uint     `json:"timeline,omitempty" example:"15"`
+	CreatedAt time.Time `json:"created_at" example:"2025-06-25T11:34:00Z"`
 	User      struct {
-		ID       uint64 `json:"id"`
-		Nickname string `json:"nickname"`
+		ID       uint64 `json:"id"       example:"2"`
+		Nickname string `json:"nickname" example:"Tom"`
 	} `json:"user"`
 }
 
-// CreateComment 创建评论或弹幕 (V2版，返回一致的结构)
+// ---------- 处理器 ----------
+
+// CreateComment godoc
+// @Summary      创建评论 / 弹幕
+// @Description  需要登录。根据视频 ID 创建评论或弹幕
+// @Tags         评论
+// @Security     ApiKeyAuth
+// @Accept       json
+// @Produce      json
+// @Param        id    path      int64                true  "视频 ID"
+// @Param        body  body      CreateCommentRequest true  "评论内容"
+// @Success      201   {object}  CommentInfo
+// @Failure      400   {object}  ErrorResponse
+// @Failure      401   {object}  ErrorResponse
+// @Failure      500   {object}  ErrorResponse
+// @Router       /videos/{id}/comments [post]
 func CreateComment(c *gin.Context) {
 	videoID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid video ID"})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid video ID"})
 		return
 	}
 
 	var req CreateCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -45,39 +63,46 @@ func CreateComment(c *gin.Context) {
 
 	comment, err := service.CreateCommentService(userID, videoID, req.Content, req.Timeline)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	// 构造和 ListComments 一致的响应结构
-	response := CommentInfo{
+	resp := CommentInfo{
 		ID:        comment.ID,
 		Content:   comment.Content,
 		Timeline:  comment.Timeline,
 		CreatedAt: comment.CreatedAt,
 	}
-	response.User.ID = comment.User.ID
-	response.User.Nickname = comment.User.Nickname
+	resp.User.ID = comment.User.ID
+	resp.User.Nickname = comment.User.Nickname
 
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, resp)
 }
 
-// ListComments 获取评论列表 (V2版)
+// ListComments godoc
+// @Summary      获取评论列表
+// @Description  根据视频 ID 获取评论 / 弹幕列表
+// @Tags         评论
+// @Produce      json
+// @Param        id  path      int64  true  "视频 ID"
+// @Success      200 {array}   CommentInfo
+// @Failure      400 {object}  ErrorResponse
+// @Failure      500 {object}  ErrorResponse
+// @Router       /videos/{id}/comments [get]
 func ListComments(c *gin.Context) {
 	videoID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid video ID"})
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid video ID"})
 		return
 	}
 
 	comments, err := service.ListCommentsService(videoID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	// 构造响应数据，避免暴露过多用户信息
-	var response []CommentInfo
+	var resp []CommentInfo
 	for _, comment := range comments {
 		info := CommentInfo{
 			ID:        comment.ID,
@@ -87,8 +112,8 @@ func ListComments(c *gin.Context) {
 		}
 		info.User.ID = comment.User.ID
 		info.User.Nickname = comment.User.Nickname
-		response = append(response, info)
+		resp = append(resp, info)
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, resp)
 }
