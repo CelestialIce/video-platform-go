@@ -52,11 +52,18 @@ definitions:
     type: object
   handler.InitiateUploadRequest:
     properties:
+      description:
+        example: A funny video
+        type: string
       file_name:
-        example: holiday.mp4
+        example: movie.mp4
+        type: string
+      title:
+        example: My Movie
         type: string
     required:
     - file_name
+    - title
     type: object
   handler.InitiateUploadResponse:
     properties:
@@ -393,7 +400,7 @@ paths:
       - application/json
       description: 生成预签名上传 URL
       parameters:
-      - description: 文件名
+      - description: 上传元数据
         in: body
         name: body
         required: true

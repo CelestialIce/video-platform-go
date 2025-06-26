@@ -12,8 +12,11 @@ import (
 // ---------- 请求 / 响应 DTO ----------
 
 // InitiateUploadRequest 初始化上传请求体
+// after
 type InitiateUploadRequest struct {
-	FileName string `json:"file_name" binding:"required" example:"holiday.mp4"`
+    FileName    string `json:"file_name"    binding:"required" example:"movie.mp4"`
+    Title       string `json:"title"        binding:"required" example:"My Movie"`
+    Description string `json:"description"                     example:"A funny video"`
 }
 
 // InitiateUploadResponse 初始化上传成功响应
@@ -64,36 +67,42 @@ type VideoDetailsResponse struct {
 // @Security     ApiKeyAuth
 // @Accept       json
 // @Produce      json
-// @Param        body  body      InitiateUploadRequest  true  "文件名"
+// @Param 		 body  body		 InitiateUploadRequest true "上传元数据"
 // @Success      200   {object}  InitiateUploadResponse
 // @Failure      400   {object}  ErrorResponse
 // @Failure      401   {object}  ErrorResponse
 // @Failure      500   {object}  ErrorResponse
 // @Router       /videos/upload/initiate [post]
 func InitiateUpload(c *gin.Context) {
-	var req InitiateUploadRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid file name"})
-		return
-	}
+    var req InitiateUploadRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request body"})
+        return
+    }
 
-	userIDVal, _ := c.Get("user_id")
-	userID, ok := userIDVal.(float64)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid user ID in token"})
-		return
-	}
+    userIDVal, _ := c.Get("user_id")
+    userID, ok := userIDVal.(float64)
+    if !ok {
+        c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid user ID in token"})
+        return
+    }
 
-	url, video, err := service.InitiateUploadService(uint64(userID), req.FileName)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
-		return
-	}
+    // *** 传 4 个参数 ***
+    url, video, err := service.InitiateUploadService(
+        uint64(userID),
+        req.FileName,
+        req.Title,
+        req.Description,
+    )
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+        return
+    }
 
-	c.JSON(http.StatusOK, InitiateUploadResponse{
-		UploadURL: url,
-		VideoID:   video.ID,
-	})
+    c.JSON(http.StatusOK, InitiateUploadResponse{
+        UploadURL: url,
+        VideoID:   video.ID,
+    })
 }
 
 // CompleteUpload godoc

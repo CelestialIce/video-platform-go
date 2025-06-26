@@ -47,32 +47,43 @@ func CompleteUploadService(videoID uint64) error {
 	return dal.PublishTranscodeTask(context.Background(), body)
 }
 
-// InitiateUploadService 处理视频上传初始化的逻辑
-func InitiateUploadService(userID uint64, fileName string) (string, *model.Video, error) {
-	// 1. 创建视频记录
+// 旧签名：InitiateUploadService(userID uint64, fileName string)
+// 新签名：InitiateUploadService(userID uint64, fileName, title, description string)
+func InitiateUploadService(
+	userID uint64,
+	fileName string,
+	title string,
+	description string,
+) (string, *model.Video, error) {
+
+	// 1. 创建视频记录（存入真实标题与描述）
 	video := model.Video{
-		UserID: userID,
-		Title:  fileName, // 暂时用文件名作为标题
-		Status: "uploading",
+		UserID:      userID,
+		Title:       title,
+		Description: description,
+		Status:      "uploading",
 	}
 	if err := dal.DB.Create(&video).Error; err != nil {
 		return "", nil, err
 	}
 
-	// 2. 生成预签名 URL
-	// 对象在 MinIO 中的存储路径，例如: raw/123/video.mp4
+	// 2. 生成预签名 URL（路径仍用 fileName）
 	objectName := filepath.Join("raw", fmt.Sprintf("%d", video.ID), fileName)
 	bucketName := config.AppConfig.MinIO.BucketName
-	expiration := time.Hour * 24 // URL 有效期 24 小时
+	expiration := time.Hour * 24
 
-	presignedURL, err := dal.MinioClient.PresignedPutObject(context.Background(), bucketName, objectName, expiration)
+	urlObj, err := dal.MinioClient.PresignedPutObject(
+		context.Background(),
+		bucketName,
+		objectName,
+		expiration,
+	)
 	if err != nil {
 		return "", nil, err
 	}
 
-	return presignedURL.String(), &video, nil
+	return urlObj.String(), &video, nil
 }
-
 // ListVideosService 获取视频列表（带分页）
 func ListVideosService(limit, offset int) ([]model.Video, int64, error) {
 	var videos []model.Video

@@ -228,7 +228,7 @@ const docTemplate = `{
                 "summary": "初始化视频上传",
                 "parameters": [
                     {
-                        "description": "文件名",
+                        "description": "上传元数据",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -488,12 +488,21 @@ const docTemplate = `{
         "handler.InitiateUploadRequest": {
             "type": "object",
             "required": [
-                "file_name"
+                "file_name",
+                "title"
             ],
             "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "A funny video"
+                },
                 "file_name": {
                     "type": "string",
-                    "example": "holiday.mp4"
+                    "example": "movie.mp4"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "My Movie"
                 }
             }
         },

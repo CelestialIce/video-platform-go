@@ -85,9 +85,12 @@ print_header "2. 视频上传与转码流水线"
 # 2.1 申请预签名上传URL
 print_command "申请上传URL..."
 INITIATE_RESPONSE=$(curl -s -X POST "$API_BASE_URL/videos/upload/initiate" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "{\"file_name\": \"$TEST_VIDEO_FILENAME\"}")
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"file_name\":\"$TEST_VIDEO_FILENAME\", \
+       \"title\":\"自动化测试视频\", \
+       \"description\":\"脚本上传的示例视频\"}")
+
 
 UPLOAD_URL=$(echo "$INITIATE_RESPONSE" | jq -r '.upload_url')
 VIDEO_ID=$(echo "$INITIATE_RESPONSE" | jq -r '.video_id')
