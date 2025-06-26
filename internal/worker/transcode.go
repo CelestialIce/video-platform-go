@@ -29,6 +29,7 @@ type ffprobeOutput struct {
 func HandleTranscode(videoID uint64) error {
 	// --- 0. 准备工作 ---
 	var video model.Video
+	// 从数据库获取视频的完整信息，包括了我们新加的 OriginalFileName
 	if err := dal.DB.First(&video, videoID).Error; err != nil {
 		return fmt.Errorf("video %d not found: %w", videoID, err)
 	}
@@ -37,15 +38,21 @@ func HandleTranscode(videoID uint64) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tempDir) // 保证函数结束时删除临时目录
+	defer os.RemoveAll(tempDir)
 
 	bucketName := config.AppConfig.MinIO.BucketName
-	rawObjectName := filepath.Join("raw", fmt.Sprintf("%d", video.ID), video.Title)
-	localRawPath := filepath.Join(tempDir, video.Title)
 
+	// 【核心修改】使用 video.OriginalFileName 而不是 video.Title 来构建下载路径
+	rawObjectName := filepath.Join("raw", fmt.Sprintf("%d", video.ID), video.OriginalFileName)
+	// 本地保存的文件名也使用 OriginalFileName，保持一致性
+	localRawPath := filepath.Join(tempDir, video.OriginalFileName)
+
+	// 下载原始视频文件
 	if err := dal.MinioClient.FGetObject(context.Background(), bucketName, rawObjectName, localRawPath, minio.GetObjectOptions{}); err != nil {
+		// 下载失败，更新数据库状态并返回错误
 		dal.DB.Model(&video).Update("status", "failed")
-		return fmt.Errorf("failed to download from minio: %w", err)
+		// 在日志中明确指出是哪个对象键下载失败，方便排查
+		return fmt.Errorf("failed to download from minio (key: %s): %w", rawObjectName, err)
 	}
 	log.Printf("Downloaded %s to %s", rawObjectName, localRawPath)
 

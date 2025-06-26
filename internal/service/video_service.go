@@ -47,7 +47,7 @@ func CompleteUploadService(videoID uint64) error {
 	return dal.PublishTranscodeTask(context.Background(), body)
 }
 
-// 旧签名：InitiateUploadService(userID uint64, fileName string)
+
 // 新签名：InitiateUploadService(userID uint64, fileName, title, description string)
 func InitiateUploadService(
 	userID uint64,
@@ -56,22 +56,25 @@ func InitiateUploadService(
 	description string,
 ) (string, *model.Video, error) {
 
-	// 1. 创建视频记录（存入真实标题与描述）
+	// 1. 创建视频记录，并保存原始文件名
 	video := model.Video{
-		UserID:      userID,
-		Title:       title,
-		Description: description,
-		Status:      "uploading",
+		UserID:           userID,
+		Title:            title,
+		Description:      description,
+		OriginalFileName: fileName, // <-- 将传入的 fileName 保存到新字段
+		Status:           "uploading",
 	}
 	if err := dal.DB.Create(&video).Error; err != nil {
+		// 如果创建失败，可能需要记录日志
 		return "", nil, err
 	}
 
-	// 2. 生成预签名 URL（路径仍用 fileName）
+	// 2. 使用原始文件名(fileName)和新生成的video.ID来构建对象路径
 	objectName := filepath.Join("raw", fmt.Sprintf("%d", video.ID), fileName)
 	bucketName := config.AppConfig.MinIO.BucketName
-	expiration := time.Hour * 24
+	expiration := time.Hour * 24 // 上传链接有效期24小时
 
+	// 3. 生成预签名 PUT URL
 	urlObj, err := dal.MinioClient.PresignedPutObject(
 		context.Background(),
 		bucketName,
@@ -79,6 +82,8 @@ func InitiateUploadService(
 		expiration,
 	)
 	if err != nil {
+		// 如果生成URL失败，最好将刚才创建的数据库记录删除或标记为失败，以避免脏数据
+		// dal.DB.Delete(&video) 
 		return "", nil, err
 	}
 
