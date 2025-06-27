@@ -5,13 +5,15 @@ import (
 	"context"
 	"path/filepath"
 	"time"
+
 	"github.com/cjh/video-platform-go/internal/config"
 	"github.com/cjh/video-platform-go/internal/dal"
 	"github.com/cjh/video-platform-go/internal/dal/model"
+
 	// "github.com/minio/minio-go/v7" - Unused import
 	"encoding/json" // 确保导入
-	"fmt"             // 确保导入
-    "net/url" // 确保导入
+	"fmt"           // 确保导入
+	"net/url"       // 确保导入
 )
 
 // TranscodeTaskPayload 是我们要发送到消息队列的任务内容
@@ -46,7 +48,6 @@ func CompleteUploadService(videoID uint64) error {
 
 	return dal.PublishTranscodeTask(context.Background(), body)
 }
-
 
 // 新签名：InitiateUploadService(userID uint64, fileName, title, description string)
 func InitiateUploadService(
@@ -83,12 +84,13 @@ func InitiateUploadService(
 	)
 	if err != nil {
 		// 如果生成URL失败，最好将刚才创建的数据库记录删除或标记为失败，以避免脏数据
-		// dal.DB.Delete(&video) 
+		// dal.DB.Delete(&video)
 		return "", nil, err
 	}
 
 	return urlObj.String(), &video, nil
 }
+
 // ListVideosService 获取视频列表（带分页）
 func ListVideosService(limit, offset int) ([]model.Video, int64, error) {
 	var videos []model.Video
@@ -105,6 +107,27 @@ func ListVideosService(limit, offset int) ([]model.Video, int64, error) {
 	// 获取分页数据
 	if err := db.Order("created_at desc").Limit(limit).Offset(offset).Find(&videos).Error; err != nil {
 		return nil, 0, err
+	}
+
+	// 为每个视频生成带签名的临时 CoverURL
+	for i := range videos {
+		if videos[i].CoverURL != "" {
+			reqParams := make(url.Values)
+			// 生成带签名的临时 URL
+			presignedURL, err := dal.MinioClient.PresignedGetObject(context.Background(),
+				config.AppConfig.MinIO.BucketName,
+				videos[i].CoverURL, // CoverURL 里存的是对象路径
+				time.Minute*15,     // 设置一个较短的有效期，例如15分钟
+				reqParams,
+			)
+			if err != nil {
+				// 记录错误并继续处理下一个视频
+				fmt.Printf("failed to generate presigned url for cover %s: %v\n", videos[i].CoverURL, err)
+				continue
+			}
+			// 用签名的 URL 替换掉数据库里的永久路径
+			videos[i].CoverURL = presignedURL.String()
+		}
 	}
 
 	return videos, total, nil
