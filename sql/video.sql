@@ -21,6 +21,7 @@ CREATE TABLE `videos` (
   `user_id` BIGINT UNSIGNED NOT NULL,
   `title` VARCHAR(255) NOT NULL,
   `description` TEXT,
+  `original_file_name` VARCHAR(255) NOT NULL,
   `status` ENUM('uploading', 'transcoding', 'online', 'failed', 'private') NOT NULL DEFAULT 'uploading',
   `duration` INT UNSIGNED COMMENT '视频时长，单位秒',
   `cover_url` VARCHAR(1024),
@@ -59,14 +60,11 @@ CREATE TABLE `comments` (
 ) ENGINE=InnoDB;
 
 -- 触发器示例：更新视频表的 updated_at
--- (在实际应用中，ORM 或框架通常会自动处理，但为满足报告要求可以写一个)
 DELIMITER $$
-CREATE TRIGGER `trg_videos_update`
+	CREATE TRIGGER `trg_videos_update`
 BEFORE UPDATE ON `videos`
 FOR EACH ROW
 BEGIN
     SET NEW.updated_at = CURRENT_TIMESTAMP;
 END$$
 DELIMITER ;
-
-ALTER TABLE videos ADD COLUMN original_file_name VARCHAR(255) NOT NULL AFTER description;

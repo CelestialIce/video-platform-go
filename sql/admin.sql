@@ -23,7 +23,8 @@
 # Dump of table goadmin_menu
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `goadmin_menu`;
+CREATE DATABASE IF NOT EXISTS `video_platform_mvp` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `video_platform_mvp`;
 
 CREATE TABLE `goadmin_menu` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -61,8 +62,6 @@ UNLOCK TABLES;
 # Dump of table goadmin_operation_log
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `goadmin_operation_log`;
-
 CREATE TABLE `goadmin_operation_log` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `user_id` int(11) unsigned NOT NULL,
@@ -80,8 +79,6 @@ CREATE TABLE `goadmin_operation_log` (
 # Dump of table goadmin_site
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `goadmin_site`;
-
 CREATE TABLE `goadmin_site` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `key` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -96,8 +93,6 @@ CREATE TABLE `goadmin_site` (
 
 # Dump of table goadmin_permissions
 # ------------------------------------------------------------
-
-DROP TABLE IF EXISTS `goadmin_permissions`;
 
 CREATE TABLE `goadmin_permissions` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -126,8 +121,6 @@ UNLOCK TABLES;
 # Dump of table goadmin_role_menu
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `goadmin_role_menu`;
-
 CREATE TABLE `goadmin_role_menu` (
   `role_id` int(11) unsigned NOT NULL,
   `menu_id` int(11) unsigned NOT NULL,
@@ -154,8 +147,6 @@ UNLOCK TABLES;
 # Dump of table goadmin_role_permissions
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `goadmin_role_permissions`;
-
 CREATE TABLE `goadmin_role_permissions` (
   `role_id` int(11) unsigned NOT NULL,
   `permission_id` int(11) unsigned NOT NULL,
@@ -180,8 +171,6 @@ UNLOCK TABLES;
 # Dump of table goadmin_role_users
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `goadmin_role_users`;
-
 CREATE TABLE `goadmin_role_users` (
   `role_id` int(11) unsigned NOT NULL,
   `user_id` int(11) unsigned NOT NULL,
@@ -204,8 +193,6 @@ UNLOCK TABLES;
 
 # Dump of table goadmin_roles
 # ------------------------------------------------------------
-
-DROP TABLE IF EXISTS `goadmin_roles`;
 
 CREATE TABLE `goadmin_roles` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -232,8 +219,6 @@ UNLOCK TABLES;
 # Dump of table goadmin_session
 # ------------------------------------------------------------
 
-DROP TABLE IF EXISTS `goadmin_session`;
-
 CREATE TABLE `goadmin_session` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `sid` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
@@ -247,8 +232,6 @@ CREATE TABLE `goadmin_session` (
 
 # Dump of table goadmin_user_permissions
 # ------------------------------------------------------------
-
-DROP TABLE IF EXISTS `goadmin_user_permissions`;
 
 CREATE TABLE `goadmin_user_permissions` (
   `user_id` int(11) unsigned NOT NULL,
@@ -272,8 +255,6 @@ UNLOCK TABLES;
 
 # Dump of table goadmin_users
 # ------------------------------------------------------------
-
-DROP TABLE IF EXISTS `goadmin_users`;
 
 CREATE TABLE `goadmin_users` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,

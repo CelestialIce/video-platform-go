@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"	
+	"strconv"
 
 	"github.com/cjh/video-platform-go/internal/config"
 	"github.com/cjh/video-platform-go/internal/dal"
@@ -78,7 +78,7 @@ func HandleTranscode(videoID uint64) error {
 	}
 
 	// 1.3 上传封面图
-	coverObjectName := filepath.Join("processed", fmt.Sprintf("%d", videoID), "cover.jpg")
+	coverObjectName := filepath.ToSlash(filepath.Join("processed", fmt.Sprintf("%d", videoID), "cover.jpg"))
 	if _, err := dal.MinioClient.FPutObject(context.Background(), bucketName, coverObjectName, coverPath, minio.PutObjectOptions{}); err != nil {
 		log.Printf("Failed to upload cover: %v", err)
 		// 上传失败也不是致命错误
@@ -134,10 +134,10 @@ func HandleTranscode(videoID uint64) error {
 
 		// 准备要写入数据库的 video_source
 		newVideoSources = append(newVideoSources, model.VideoSource{
-			VideoID: video.ID,
-			Quality: profile.Name,
-			Format:  "HLS",
-			URL:     filepath.ToSlash(filepath.Join(processedPathPrefix, fmt.Sprintf("%s.m3u8", profile.Name))),
+			VideoID:  video.ID,
+			Quality:  profile.Name,
+			Format:   "HLS",
+			URL:      filepath.ToSlash(filepath.Join(processedPathPrefix, fmt.Sprintf("%s.m3u8", profile.Name))),
 			FileSize: totalSize, // <-- 新增：填充文件大小
 		})
 	}

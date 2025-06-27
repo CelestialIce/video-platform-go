@@ -5,7 +5,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"github.com/cjh/video-platform-go/internal/config" // 确认是新的模块路径
+
+	"github.com/cjh/video-platform-go/internal/config"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"gorm.io/driver/mysql"
@@ -37,8 +38,7 @@ func InitMySQL(cfg *config.Config) {
 	log.Println("Database connection established")
 }
 
-
-// InitMinIO 初始化 MinIO 客户端
+// InitMinIO 初始化 MinIO 客户端并设置存储桶为公开可读
 func InitMinIO(cfg *config.Config) {
 	var err error
 	MinioClient, err = minio.New(cfg.MinIO.Endpoint, &minio.Options{
@@ -64,5 +64,25 @@ func InitMinIO(cfg *config.Config) {
 		log.Printf("Bucket '%s' created successfully.", bucketName)
 	} else {
 		log.Printf("Bucket '%s' already exists.", bucketName)
+	}
+
+	// ***此处新增***
+	// 设置存储桶策略为公开可读
+	policy := `{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Principal": "*",
+				"Action": ["s3:GetObject"],
+				"Resource": ["arn:aws:s3:::` + bucketName + `/*"]
+			}
+		]
+	}`
+	err = MinioClient.SetBucketPolicy(ctx, bucketName, policy)
+	if err != nil {
+		log.Printf("Warning: Could not set bucket policy to public-read: %v", err)
+	} else {
+		log.Printf("Bucket '%s' set to public-read successfully", bucketName)
 	}
 }
