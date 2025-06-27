@@ -47,33 +47,35 @@ func Register(nickname, email, password string) (*model.User, error) {
 }
 
 // Login 处理用户登录逻辑
-func Login(email, password string) (string, error) {
+func Login(email, password string) (token string, userID uint64, nickname string, err error) {
 	var user model.User
-	if err := dal.DB.Where("email = ?", email).First(&user).Error; err != nil {
+	if err = dal.DB.Where("email = ?", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", errors.New("invalid credentials")
+			err = errors.New("invalid credentials")
 		}
-		return "", err
+		return
 	}
 
-	// 比较哈希密码和输入的密码
-	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
-		return "", errors.New("invalid credentials")
+	// 校验密码
+	if err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
+		err = errors.New("invalid credentials")
+		return
 	}
 
-	// 生成 JWT Token
+	// 生成 JWT
 	claims := jwt.MapClaims{
 		"user_id": user.ID,
 		"role":    user.Role,
 		"exp":     time.Now().Add(time.Hour * time.Duration(config.AppConfig.JWT.ExpireHours)).Unix(),
 		"iat":     time.Now().Unix(),
 	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(config.AppConfig.JWT.Secret))
+	j := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token, err = j.SignedString([]byte(config.AppConfig.JWT.Secret))
 	if err != nil {
-		return "", err
+		return
 	}
 
-	return tokenString, nil
+	userID = user.ID
+	nickname = user.Nickname
+	return
 }

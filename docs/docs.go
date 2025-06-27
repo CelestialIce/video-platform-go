@@ -558,9 +558,19 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Login successful"
                 },
+                "nickname": {
+                    "description": "➜ 新增",
+                    "type": "string",
+                    "example": "TomCat"
+                },
                 "token": {
                     "type": "string",
                     "example": "\u003cjwt\u003e"
+                },
+                "user_id": {
+                    "description": "➜ 新增",
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },

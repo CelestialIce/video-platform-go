@@ -31,9 +31,12 @@ type LoginRequest struct {
 
 // LoginResponse 登录成功响应
 type LoginResponse struct {
-	Message string `json:"message" example:"Login successful"`
-	Token   string `json:"token"   example:"<jwt>"`
+	Message  string `json:"message"  example:"Login successful"`
+	Token    string `json:"token"    example:"<jwt>"`
+	UserID   uint64 `json:"user_id"  example:"1"`         // ➜ 新增
+	Nickname string `json:"nickname" example:"TomCat"`    // ➜ 新增
 }
+
 
 // ---------- 处理器 ----------
 
@@ -85,14 +88,16 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := service.Login(req.Email, req.Password)
+	token, userID, nickname, err := service.Login(req.Email, req.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, LoginResponse{
-		Message: "Login successful",
-		Token:   token,
+		Message:  "Login successful",
+		Token:    token,
+		UserID:   userID,
+		Nickname: nickname,
 	})
 }

@@ -101,9 +101,17 @@ definitions:
       message:
         example: Login successful
         type: string
+      nickname:
+        description: ➜ 新增
+        example: TomCat
+        type: string
       token:
         example: <jwt>
         type: string
+      user_id:
+        description: ➜ 新增
+        example: 1
+        type: integer
     type: object
   handler.MessageResponse:
     properties:
