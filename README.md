@@ -139,6 +139,11 @@ API Base URL: `http://localhost:8000/api/v1`
 6.  **Worker 程序** 监听到该消息，从 MinIO 下载原始视频，使用 `ffmpeg` 转码成 HLS 格式，再将 `.m3u8` 和 `.ts` 文件上传回 MinIO。
 7.  **Worker 程序** 将转码结果（播放地址等）写入 `video_sources` 表，并将 `videos` 表的状态更新为 `online`。任务完成。
 
+---
+## 项目配合的前端框架
+https://github.com/lleey/video-platform-frontend
+
+
 ## 后续计划 (Next Steps)
 
 - [ ] 实现多码率转码和封面图截取
