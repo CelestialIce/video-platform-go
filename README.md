@@ -48,9 +48,9 @@
 │   ├── dal/            # 数据访问层 (GORM, MinIO, RabbitMQ)
 │   ├── service/        # 业务逻辑层
 │   └── worker/         # Worker 的核心处理逻辑 (FFmpeg)
-├── docker-compose.yml  # 基础设施编排文件
+├── docker-compose.yml  # docker-compose 配置文件
 ├── go.mod              # Go 模块依赖管理
-├── go.sum
+├── go.sum              # Go 模块依赖校验
 └── README.md           # 项目说明文档
 ```
 

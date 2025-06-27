@@ -4,12 +4,13 @@ services:
     container_name: video-mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: your_strong_password
+      MYSQL_ROOT_PASSWORD: 497504
       MYSQL_DATABASE: video_platform_mvp
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d
 
   redis:
     image: redis:7-alpine

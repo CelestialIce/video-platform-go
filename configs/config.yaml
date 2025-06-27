@@ -6,7 +6,7 @@ mysql:
   host: "127.0.0.1"
   port: "3306"
   user: "root"
-  password: "your_strong_password" # <-- 换成你自己的密码
+  password: "497504" # <-- 换成你自己的密码
   database: "video_platform_mvp"
 
 redis:
@@ -15,7 +15,7 @@ redis:
   db: 0
 
 jwt:
-  secret: "your-very-secret-key-change-it" # 换成一个更复杂的密钥
+  secret: "497504" # 换成一个更复杂的密钥
   expire_hours: 72 # Token 有效期（小时）
 
 minio:
@@ -26,6 +26,10 @@ minio:
   bucket_name: "videos" # 我们将要把视频存放到这个桶里
 
 rabbitmq:
+  host: "127.0.0.1"
+  port: "5672"
+  user: "user"
+  password: "password" # 这是 docker-compose 中定义的用户和密码
   url: "amqp://user:password@127.0.0.1:5672/" # 这是 docker-compose 中定义的用户和密码
   transcode_queue: "video_transcoding_queue" # 我们给转码任务队列起个名字
 

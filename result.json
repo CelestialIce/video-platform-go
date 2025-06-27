@@ -3,8 +3,8 @@ cjh@ubuntu:~/go/video-platform-go$ ./full_test.sh
 ==================================================
   1. 用户注册与登录
 ==================================================
-CMD> 注册新用户: testuser-1750949272@example.com
-{"message":"User registered successfully","user_id":11}
+CMD> 注册新用户: testuser-1750946556@example.com
+{"message":"User registered successfully","user_id":6}
 CMD> 登录固定账户: test@example.com
 INFO> 登录成功，Token 已提取并存入 login_response.json
 
@@ -12,8 +12,8 @@ INFO> 登录成功，Token 已提取并存入 login_response.json
   2. 视频上传与转码流水线
 ==================================================
 CMD> 申请上传URL...
-INFO> 申请成功! Video ID: 12
-INFO> Upload URL: http://127.0.0.1:9000/videos/raw/12/test2.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=mini...
+INFO> 申请成功! Video ID: 7
+INFO> Upload URL: http://127.0.0.1:9000/videos/raw/7/test2.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minio...
 CMD> 使用 cURL 上传本地视频文件...
 INFO> 文件上传成功! (HTTP 200)
 CMD> 通知服务器上传完成，触发后台转码...
@@ -24,47 +24,46 @@ INFO> 等待 20 秒，以便 Worker 完成转码...
 ==================================================
   3. 验证转码结果与查询 API
 ==================================================
-CMD> 查询 Video ID: 12 的详情...
+CMD> 查询 Video ID: 7 的详情...
 {
   "video": {
-    "id": 12,
+    "id": 7,
     "user_id": 1,
-    "title": "自动化测试视频",
-    "description": "脚本上传的示例视频",
-    "original_file_name": "test2.mp4",
+    "title": "test2.mp4",
+    "description": "",
     "status": "online",
     "duration": 9,
-    "cover_url": "processed/12/cover.jpg",
-    "created_at": "2025-06-26T22:47:52+08:00",
-    "updated_at": "2025-06-26T14:47:54+08:00"
+    "cover_url": "processed/7/cover.jpg",
+    "created_at": "2025-06-26T22:02:36+08:00",
+    "updated_at": "2025-06-26T14:02:38+08:00"
   },
   "sources": [
     {
-      "id": 22,
-      "video_id": 12,
+      "id": 16,
+      "video_id": 7,
       "quality": "1080p",
       "format": "HLS",
-      "url": "http://127.0.0.1:9000/videos/processed/12/hls_1080p/1080p.m3u8?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20250626%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250626T144812Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=a80bb0fc820f90e93634e2444babf37874f75a9700dec22c7d32b7c5f44685b4",
+      "url": "http://127.0.0.1:9000/videos/processed/7/hls_1080p/1080p.m3u8?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20250626%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250626T140256Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=df9939af3b6a8380e970cfe643c50feb4571cc33054abdb080902c2e3c3f539a",
       "file_size": 2096316,
-      "created_at": "2025-06-26T22:47:54+08:00"
+      "created_at": "2025-06-26T22:02:38+08:00"
     },
     {
-      "id": 20,
-      "video_id": 12,
+      "id": 14,
+      "video_id": 7,
       "quality": "360p",
       "format": "HLS",
-      "url": "http://127.0.0.1:9000/videos/processed/12/hls_360p/360p.m3u8?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20250626%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250626T144812Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=c786f2a2e89c63f972eebf4748677851660e2bd924797c77ad23d64a40c83c5d",
+      "url": "http://127.0.0.1:9000/videos/processed/7/hls_360p/360p.m3u8?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20250626%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250626T140256Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=b6a9c2bafb534fa5ec2f8b872a2fb974616ec9f18f4a309b06e1de69642a6523",
       "file_size": 387019,
-      "created_at": "2025-06-26T22:47:54+08:00"
+      "created_at": "2025-06-26T22:02:38+08:00"
     },
     {
-      "id": 21,
-      "video_id": 12,
+      "id": 15,
+      "video_id": 7,
       "quality": "720p",
       "format": "HLS",
-      "url": "http://127.0.0.1:9000/videos/processed/12/hls_720p/720p.m3u8?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20250626%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250626T144812Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=85fceb2e6c646f4ac194bb0237e54fe664d65d74dd1ebc424a4d930e602acc36",
+      "url": "http://127.0.0.1:9000/videos/processed/7/hls_720p/720p.m3u8?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20250626%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250626T140256Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=4d250f7edadabd2248dd7cb95980850b1e6d47d9fc03c8f97c1c4f765d33b6e5",
       "file_size": 1021895,
-      "created_at": "2025-06-26T22:47:54+08:00"
+      "created_at": "2025-06-26T22:02:38+08:00"
     }
   ]
 }
@@ -74,45 +73,45 @@ INFO> 2. 'duration' 应该有一个大于0的数值。
 INFO> 3. 'cover_url' 应该包含 'cover.jpg'。
 INFO> 4. 'sources' 数组应该包含 '360p' 和 '720p' 两个对象。
 INFO> 5. 'sources' 中的 'url' 应该是带签名的临时播放地址。
-CMD> 为 Video ID: 12 发表一条评论...
+CMD> 为 Video ID: 7 发表一条评论...
 {
-  "id": 20,
+  "id": 10,
   "content": "这是通过自动化脚本发表的评论！",
-  "created_at": "2025-06-26T22:48:12+08:00",
+  "created_at": "2025-06-26T22:02:56+08:00",
   "user": {
     "id": 1,
     "nickname": "testuser"
   }
 }
 
-CMD> 再次为 Video ID: 12 发表一条弹幕...
+CMD> 再次为 Video ID: 7 发表一条弹幕...
 {
-  "id": 21,
+  "id": 11,
   "content": "弹幕来啦~~~",
   "timeline": 15,
-  "created_at": "2025-06-26T22:48:12+08:00",
+  "created_at": "2025-06-26T22:02:56+08:00",
   "user": {
     "id": 1,
     "nickname": "testuser"
   }
 }
 
-CMD> 查询 Video ID: 12 的评论列表...
+CMD> 查询 Video ID: 7 的评论列表...
 [
   {
-    "id": 20,
+    "id": 10,
     "content": "这是通过自动化脚本发表的评论！",
-    "created_at": "2025-06-26T22:48:12+08:00",
+    "created_at": "2025-06-26T22:02:56+08:00",
     "user": {
       "id": 1,
       "nickname": "testuser"
     }
   },
   {
-    "id": 21,
+    "id": 11,
     "content": "弹幕来啦~~~",
     "timeline": 15,
-    "created_at": "2025-06-26T22:48:12+08:00",
+    "created_at": "2025-06-26T22:02:56+08:00",
     "user": {
       "id": 1,
       "nickname": "testuser"
@@ -125,24 +124,6 @@ INFO> 2. 每条评论都应该有一个 'user' 对象，内含 'id' 和 'nicknam
 CMD> 查询视频列表...
 {
   "videos": [
-    {
-      "id": 12,
-      "title": "自动化测试视频",
-      "description": "脚本上传的示例视频",
-      "cover_url": "processed/12/cover.jpg",
-      "status": "online",
-      "duration": 9,
-      "created_at": "2025-06-26T22:47:52+08:00"
-    },
-    {
-      "id": 11,
-      "title": "自动化测试视频",
-      "description": "脚本上传的示例视频",
-      "cover_url": "processed/11/cover.jpg",
-      "status": "online",
-      "duration": 9,
-      "created_at": "2025-06-26T22:44:42+08:00"
-    },
     {
       "id": 7,
       "title": "test2.mp4",
@@ -169,12 +150,29 @@ CMD> 查询视频列表...
       "status": "online",
       "duration": 9,
       "created_at": "2025-06-25T20:32:05+08:00"
+    },
+    {
+      "id": 4,
+      "title": "test2.mp4",
+      "description": "",
+      "cover_url": "processed/4/cover.jpg",
+      "status": "online",
+      "duration": 9,
+      "created_at": "2025-06-24T09:23:50+08:00"
+    },
+    {
+      "id": 3,
+      "title": "test2.mp4",
+      "description": "",
+      "cover_url": "processed/3/cover.jpg",
+      "status": "online",
+      "duration": 9,
+      "created_at": "2025-06-24T08:18:36+08:00"
     }
   ],
-  "total": 8
+  "total": 6
 }
 
 ==================================================
   测试完成!
 ==================================================
-cjh@ubuntu:~/go/video-platform-go$ 
