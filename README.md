@@ -72,7 +72,7 @@
 #### 3. 启动基础设施
 在项目根目录下，一键启动 MySQL, Redis, RabbitMQ, MinIO 和 SRS。
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 #### 4. 初始化数据库
